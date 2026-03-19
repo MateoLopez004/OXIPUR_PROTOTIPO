@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oxipur - Panel de Control</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- Estilos compartidos -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" type="image/png" href="resources/oxipur.png">
+</head>
+<body class="dashboard-page">
+  <!-- Navbar -->
+  <nav class="bg-white shadow-lg">
+    <div class="container mx-auto px-4">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-2">
+          <h1 class="text-2xl font-bold text-blue-900">OXIPUR</h1>
+          <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">Demo</span>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+          <span class="text-gray-700" id="user-display">
+            <i class="fas fa-user-circle mr-2"></i>Admin
+          </span>
+          <a href="login.html" class="btn-logout bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md transition duration-300">
+            <i class="fas fa-sign-out-alt mr-2"></i>Cerrar sesión
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  
+  <!-- Main Content -->
+  <div class="container mx-auto px-4 py-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+      <i class="fas fa-chart-line mr-2 text-blue-600"></i>
+      Panel de Control
+    </h2>
+    
+    <!-- Statistics Panel -->
+    <div class="stats-panel bg-white rounded-lg shadow-md mb-8">
+      <div class="p-4 border-b flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-gray-800">
+          <i class="fas fa-chart-pie mr-2 text-blue-600"></i>
+          Estadísticas de Inventario
+        </h3>
+        <button class="stats-toggle text-gray-500 hover:text-blue-600 transition-colors" id="stats-toggle">
+          <i class="fas fa-chevron-up"></i>
+        </button>
+      </div>
+      
+      <div class="stats-content p-4">
+        <!-- Chart Tabs -->
+        <div class="chart-tabs flex flex-wrap gap-2 mb-6">
+          <button class="chart-tab active" data-chart="status">
+            <i class="fas fa-circle mr-1 text-green-500"></i>Estado
+          </button>
+          <button class="chart-tab" data-chart="sizes">
+            <i class="fas fa-chart-bar mr-1 text-blue-500"></i>Tamaños
+          </button>
+          <button class="chart-tab" data-chart="monthly">
+            <i class="fas fa-chart-line mr-1 text-purple-500"></i>Tendencia
+          </button>
+          <button class="chart-tab" data-chart="clients">
+            <i class="fas fa-users mr-1 text-orange-500"></i>Clientes
+          </button>
+        </div>
+        
+        <!-- Chart Containers -->
+        <div class="relative min-h-[300px]">
+          <div class="chart-container active" id="status-chart-container">
+            <canvas id="status-chart"></canvas>
+          </div>
+          <div class="chart-container" id="sizes-chart-container">
+            <canvas id="sizes-chart"></canvas>
+          </div>
+          <div class="chart-container" id="monthly-chart-container">
+            <canvas id="monthly-chart"></canvas>
+          </div>
+          <div class="chart-container" id="clients-chart-container">
+            <canvas id="clients-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form and Table Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Registration Form -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-plus-circle mr-2 text-green-600"></i>
+            Nuevo Registro
+          </h3>
+          
+          <form id="cylinder-form" class="space-y-4">
+            <div>
+              <label for="serial-number" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-barcode mr-1 text-gray-400"></i>Número de Serie
+              </label>
+              <input type="text" id="serial-number" class="form-input" placeholder="Ej: OX-2024-001" required>
+            </div>
+            
+            <div>
+              <label for="cylinder-size" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-ruler mr-1 text-gray-400"></i>Tamaño (m³)
+              </label>
+              <input type="number" id="cylinder-size" step="0.01" class="form-input" placeholder="Ej: 5.0" required>
+            </div>
+            
+            <div>
+              <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-money-bill mr-1 text-gray-400"></i>Monto (BOB)
+              </label>
+              <input type="number" id="amount" step="0.01" class="form-input" placeholder="Dejar vacío si es relleno">
+              <p class="text-xs text-gray-500 mt-1">Si está vacío = va a planta para relleno</p>
+            </div>
+            
+            <div>
+              <label for="client-name" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-user mr-1 text-gray-400"></i>Cliente
+              </label>
+              <input type="text" id="client-name" class="form-input" placeholder="Nombre del cliente" required>
+            </div>
+            
+            <div>
+              <label for="datetime" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-calendar mr-1 text-gray-400"></i>Fecha y Hora
+              </label>
+              <input type="text" id="datetime" class="form-input bg-gray-50" readonly>
+            </div>
+            
+            <div>
+              <label for="owner" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-tag mr-1 text-gray-400"></i>Propietario
+              </label>
+              <select id="owner" class="form-input" required>
+                <option value="Cliente">Cliente</option>
+                <option value="Oxipur">Oxipur</option>
+              </select>
+            </div>
+            
+            <div class="flex space-x-3 pt-4">
+              <button type="button" id="reset-form" class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors">
+                <i class="fas fa-eraser mr-2"></i>Limpiar
+              </button>
+              <button type="submit" class="flex-1 px-4 py-2 bg-blue-800 hover:bg-blue-900 text-white rounded-md transition-colors">
+                <i class="fas fa-save mr-2"></i>Guardar
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Inventory Table -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">
+              <i class="fas fa-list mr-2 text-blue-600"></i>
+              Registros de Inventario
+            </h3>
+            
+            <button id="export-csv" class="btn-export bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors">
+              <i class="fas fa-file-export mr-2"></i>Exportar CSV
+            </button>
+          </div>
+          
+          <!-- Filters -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label for="search" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-search mr-1 text-gray-400"></i>Buscar
+              </label>
+              <input type="text" id="search" placeholder="Nº Serie o Cliente..." class="form-input">
+            </div>
+            
+            <div>
+              <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1">
+                <i class="fas fa-filter mr-1 text-gray-400"></i>Filtrar por Estado
+              </label>
+              <select id="status-filter" class="form-input">
+                <option value="all">Todos</option>
+                <option value="delivered">Entregados</option>
+                <option value="refill">Para Relleno</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serie</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tamaño</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propietario</th>
+                </tr>
+              </thead>
+              <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
+                <tr>
+                  <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2 opacity-50"></i>
+                    <p>No hay registros disponibles</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-6">
+            <div class="text-sm text-gray-500">
+              Mostrando <span id="records-count">0</span> registros
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <button class="pagination-btn px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50" data-page="prev">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <div id="pagination-numbers" class="flex space-x-1"></div>
+              <button class="pagination-btn px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50" data-page="next">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script principal -->
+  <script src="js/app.js"></script>
+</body>
+</html>
