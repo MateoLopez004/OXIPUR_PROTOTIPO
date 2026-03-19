@@ -1,6 +1,6 @@
 // ============================================
 // APP PRINCIPAL - SISTEMA OXIPUR
-// CON LOADER, ANIMACIONES Y ESTILO MEJORADO
+// CON TIPO DE MOVIMIENTO Y FECHA EDITABLE
 // ============================================
 
 // Estado global de la aplicación
@@ -15,6 +15,11 @@ const appState = {
     charts: {},
     isLoading: true
 };
+
+// ============================================
+// DATOS POR DEFECTO (VACÍOS)
+// ============================================
+const DEFAULT_DATA = [];
 
 // ============================================
 // LOADER Y ANIMACIONES
@@ -32,7 +37,7 @@ function hideLoader() {
     if (loader) {
         setTimeout(() => {
             loader.style.display = 'none';
-        }, 500); // Pequeña demora para que se vea la transición
+        }, 500);
     }
 }
 
@@ -47,82 +52,38 @@ function animateElements() {
 }
 
 // ============================================
-// CARGA DESDE ARCHIVO JSON EXTERNO
+// CARGA DESDE LOCALSTORAGE
 // ============================================
 
-// Cargar datos desde el archivo JSON
-async function loadFromJSON() {
+// Cargar datos
+function loadFromJSON() {
     showLoader();
     
     try {
-        // Limpiar localStorage si hay parámetro en URL (para pruebas)
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('reset')) {
-            localStorage.removeItem('oxipur_inventory');
-            console.log('localStorage limpiado');
-        }
-        
-        // Intentar cargar desde localStorage
         const stored = localStorage.getItem('oxipur_inventory');
         
         if (stored) {
-            // Verificar si lo que hay en localStorage NO es un array vacío
             const parsed = JSON.parse(stored);
             if (parsed.length > 0) {
                 appState.inventory = parsed;
                 console.log('Datos cargados desde localStorage:', appState.inventory.length, 'registros');
             } else {
-                // Si hay array vacío en localStorage, cargar desde JSON
-                await loadFromJSONFile();
+                appState.inventory = DEFAULT_DATA;
             }
         } else {
-            // No hay datos en localStorage, cargar desde JSON
-            await loadFromJSONFile();
+            appState.inventory = DEFAULT_DATA;
+            saveToJSON();
         }
     } catch (error) {
         console.error('Error cargando datos:', error);
-        appState.inventory = [];
-        await loadFromJSONFile();
+        appState.inventory = DEFAULT_DATA;
+        saveToJSON();
     }
     
-    // Renderizar todo
     renderInventoryTable();
     renderCharts();
     animateElements();
     hideLoader();
-}
-
-// Cargar desde archivo JSON (versión para file://)
-async function loadFromJSONFile() {
-    try {
-        console.log('Usando datos por defecto (modo file://)');
-        
-        // Datos por defecto VACÍOS
-        appState.inventory = [];
-        
-        // Si QUIERES datos de ejemplo para probar, descomenta esto:
-        /*
-        appState.inventory = [
-            {
-                id: "1",
-                serialNumber: "OX-2024-001",
-                cylinderSize: "5.0",
-                amount: "150.00",
-                clientName: "Cliente Demo",
-                datetime: new Date().toLocaleDateString() + ", 09:30",
-                status: "Entregado",
-                owner: "Cliente"
-            }
-        ];
-        */
-        
-        console.log('Datos cargados:', appState.inventory.length, 'registros');
-        saveToJSON();
-    } catch (error) {
-        console.error('Error:', error);
-        appState.inventory = [];
-        saveToJSON();
-    }
 }
 
 // Guardar datos en localStorage
@@ -141,7 +102,6 @@ function saveToJSON() {
 // ============================================
 
 function showNotification(message, type = 'success') {
-    // Crear elemento de notificación
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
@@ -151,10 +111,8 @@ function showNotification(message, type = 'success') {
     
     document.body.appendChild(notification);
     
-    // Mostrar con animación
     setTimeout(() => notification.classList.add('show'), 10);
     
-    // Ocultar después de 3 segundos
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
@@ -162,22 +120,54 @@ function showNotification(message, type = 'success') {
 }
 
 // ============================================
-// FUNCIONES DE INTERFAZ
+// MANEJO DE FECHA Y TIPO DE MOVIMIENTO
 // ============================================
 
-// Actualizar fecha y hora
-function updateDateTime() {
-    const datetimeInput = document.getElementById('datetime');
-    if (!datetimeInput) return;
+// Configurar fecha y hora inicial (hoy)
+function setDefaultDateTime() {
+    const dateInput = document.getElementById('date-input');
+    const timeInput = document.getElementById('time-input');
+    
+    if (!dateInput || !timeInput) return;
     
     const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
+    
     const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    dateInput.value = `${year}-${month}-${day}`;
+    
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
+    timeInput.value = `${hours}:${minutes}`;
+}
+
+// Formatear fecha para mostrar en tabla
+function formatDateTime(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return '';
     
-    datetimeInput.value = `${day}/${month}/${year}, ${hours}:${minutes}`;
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}, ${timeStr}`;
+}
+
+// Mostrar/ocultar campo de monto según tipo de movimiento
+function setupMovementTypeListener() {
+    const movementType = document.getElementById('movement-type');
+    const amountContainer = document.getElementById('amount-container');
+    const amountInput = document.getElementById('amount');
+    
+    if (!movementType || !amountContainer) return;
+    
+    movementType.addEventListener('change', () => {
+        if (movementType.value === 'entregado') {
+            amountContainer.style.display = 'block';
+            amountInput.required = true;
+        } else {
+            amountContainer.style.display = 'none';
+            amountInput.required = false;
+            amountInput.value = '';
+        }
+    });
 }
 
 // ============================================
@@ -217,7 +207,7 @@ function renderInventoryTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                <td colspan="7" class="px-4 py-12 text-center text-gray-500">
                     <div class="flex flex-col items-center justify-center">
                         <i class="fas fa-box-open text-5xl mb-3 opacity-30"></i>
                         <p class="text-lg font-medium">No hay registros disponibles</p>
@@ -243,6 +233,7 @@ function renderInventoryTable() {
                 ${item.amount ? `Bs ${parseFloat(item.amount).toFixed(2)}` : '-'}
             </td>
             <td class="px-4 py-3">${item.clientName}</td>
+            <td class="px-4 py-3">${item.datetime}</td>
             <td class="px-4 py-3">
                 <span class="status-badge ${item.status === 'Entregado' ? 'status-delivered' : 'status-refill'}">
                     <i class="fas fa-${item.status === 'Entregado' ? 'check-circle' : 'clock'}"></i>
@@ -306,6 +297,11 @@ function renderStatusChart() {
     const delivered = appState.inventory.filter(i => i.status === 'Entregado').length;
     const refill = appState.inventory.filter(i => i.status === 'Para Relleno').length;
     
+    if (delivered === 0 && refill === 0) {
+        ctx.canvas.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">No hay datos para mostrar</div>';
+        return;
+    }
+    
     appState.charts.status = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -323,21 +319,10 @@ function renderStatusChart() {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        padding: 20
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    titleFont: { size: 14 },
-                    bodyFont: { size: 13 }
+                    labels: { usePointStyle: true, padding: 20 }
                 }
             },
-            animation: {
-                animateScale: true,
-                animateRotate: true
-            }
+            animation: { animateScale: true, animateRotate: true }
         }
     });
 }
@@ -350,6 +335,11 @@ function renderSizesChart() {
     appState.inventory.forEach(item => {
         sizes[item.cylinderSize] = (sizes[item.cylinderSize] || 0) + 1;
     });
+    
+    if (Object.keys(sizes).length === 0) {
+        ctx.canvas.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">No hay datos para mostrar</div>';
+        return;
+    }
     
     appState.charts.sizes = new Chart(ctx, {
         type: 'bar',
@@ -365,13 +355,8 @@ function renderSizesChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            animation: {
-                duration: 2000,
-                easing: 'easeInOutQuart'
-            }
+            plugins: { legend: { display: false } },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
         }
     });
 }
@@ -386,21 +371,30 @@ function renderMonthlyChart() {
     
     const now = new Date();
     appState.inventory.forEach(item => {
-        const dateParts = item.datetime.split(',')[0].split('/');
-        if (dateParts.length === 3) {
-            const itemDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
-            const monthDiff = (now.getFullYear() - itemDate.getFullYear()) * 12 + (now.getMonth() - itemDate.getMonth());
-            
-            if (monthDiff >= 0 && monthDiff < 6) {
-                const index = 5 - monthDiff;
-                if (item.status === 'Entregado') {
-                    deliveredData[index]++;
-                } else {
-                    refillData[index]++;
+        try {
+            const dateParts = item.datetime.split(',')[0].split('/');
+            if (dateParts.length === 3) {
+                const itemDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+                const monthDiff = (now.getFullYear() - itemDate.getFullYear()) * 12 + (now.getMonth() - itemDate.getMonth());
+                
+                if (monthDiff >= 0 && monthDiff < 6) {
+                    const index = 5 - monthDiff;
+                    if (item.status === 'Entregado') {
+                        deliveredData[index]++;
+                    } else {
+                        refillData[index]++;
+                    }
                 }
             }
+        } catch (e) {
+            console.warn('Error parsing date:', item.datetime);
         }
     });
+    
+    if (deliveredData.every(v => v === 0) && refillData.every(v => v === 0)) {
+        ctx.canvas.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">No hay datos para mostrar</div>';
+        return;
+    }
     
     appState.charts.monthly = new Chart(ctx, {
         type: 'line',
@@ -438,9 +432,7 @@ function renderMonthlyChart() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 2000
-            }
+            animation: { duration: 2000 }
         }
     });
 }
@@ -458,6 +450,11 @@ function renderClientsChart() {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
     
+    if (topClients.length === 0) {
+        ctx.canvas.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">No hay datos para mostrar</div>';
+        return;
+    }
+    
     appState.charts.clients = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -473,13 +470,8 @@ function renderClientsChart() {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            animation: {
-                duration: 2000,
-                easing: 'easeInOutQuart'
-            }
+            plugins: { legend: { display: false } },
+            animation: { duration: 2000, easing: 'easeInOutQuart' }
         }
     });
 }
@@ -543,27 +535,41 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cargar datos
         loadFromJSON();
         
-        // Actualizar fecha/hora
-        updateDateTime();
-        setInterval(updateDateTime, 60000);
+        // Configurar fecha y tipo de movimiento
+        setDefaultDateTime();
+        setupMovementTypeListener();
+        
+        // Ocultar campo monto inicialmente
+        document.getElementById('amount-container').style.display = 'none';
         
         // Event listeners
         document.getElementById('reset-form').addEventListener('click', () => {
             document.getElementById('cylinder-form').reset();
-            updateDateTime();
+            setDefaultDateTime();
+            document.getElementById('amount-container').style.display = 'none';
         });
         
         document.getElementById('cylinder-form').addEventListener('submit', (e) => {
             e.preventDefault();
             
+            const movementType = document.getElementById('movement-type').value;
+            const dateInput = document.getElementById('date-input').value;
+            const timeInput = document.getElementById('time-input').value;
+            const amount = movementType === 'entregado' ? document.getElementById('amount').value : '';
+            
+            if (!dateInput || !timeInput) {
+                showNotification('Debes seleccionar fecha y hora', 'error');
+                return;
+            }
+            
             const newItem = {
                 id: Date.now().toString(),
                 serialNumber: document.getElementById('serial-number').value,
                 cylinderSize: document.getElementById('cylinder-size').value,
-                amount: document.getElementById('amount').value || '',
+                amount: amount,
                 clientName: document.getElementById('client-name').value,
-                datetime: document.getElementById('datetime').value,
-                status: document.getElementById('amount').value ? 'Entregado' : 'Para Relleno',
+                datetime: formatDateTime(dateInput, timeInput),
+                status: movementType === 'entregado' ? 'Entregado' : 'Para Relleno',
                 owner: document.getElementById('owner').value
             };
             
@@ -571,7 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
             saveToJSON();
             
             document.getElementById('cylinder-form').reset();
-            updateDateTime();
+            setDefaultDateTime();
+            document.getElementById('amount-container').style.display = 'none';
+            
             renderInventoryTable();
             renderCharts();
             
@@ -591,6 +599,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         document.getElementById('export-csv').addEventListener('click', exportToCSV);
+        
+        // Botón limpiar localStorage
+        document.getElementById('clear-storage').addEventListener('click', () => {
+            if (confirm('¿Seguro que quieres borrar TODOS los datos?')) {
+                localStorage.removeItem('oxipur_inventory');
+                appState.inventory = [];
+                renderInventoryTable();
+                renderCharts();
+                showNotification('Datos limpiados correctamente');
+            }
+        });
         
         const statsToggle = document.getElementById('stats-toggle');
         if (statsToggle) {
